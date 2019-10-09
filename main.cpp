@@ -1,83 +1,92 @@
 #include<windows.h>
-#ifdef __APPLE__
-#else
 #include <GL/glut.h>
-#endif
-#include <iostream>
 #include <math.h>
-#define PI 3.1415926
+
+#include <iostream>
 using namespace std;
-#define drawOneLine(x1,y1,x2,y2)\
-glBegin(GL_LINES); \
-glVertex2f((x1),(y1)); \
-glVertex2f((x2),(y2)); \
-glEnd();
-
-void init(void)
-{
-    glClearColor(1.0,1.0,1.0,1.0);
-    glShadeModel(GL_FLAT);
-}
-void display(void)
-{
-    int i;
-    glClear(GL_COLOR_BUFFER_BIT);
-    glColor3f(0.0,0.0,0.0);
-    glEnable(GL_LINE_STIPPLE);
-
-    glLineStipple(1, 0x0101);
-    drawOneLine(50.0,125.0,150.0,125.0);
-    glLineStipple(1, 0x00FF);
-    drawOneLine(150.0,125.0,250.0,125.0);
-    glLineStipple(1, 0x1C47);
-    drawOneLine(250.0,125.0,350.0,125.0);
-
-    glLineWidth(5.0);
-    glLineStipple(1, 0x0101);
-    drawOneLine(50.0,100.0,150.0,100.0);
-    glLineStipple(1, 0x00FF);
-    drawOneLine(150.0,100.0,250.0,100.0);
-    glLineStipple(1, 0x1C47);
-    drawOneLine(250.0,100.0,350.0,100.0);
-
-    glLineWidth(1.0);
-    glLineStipple(1, 0x1C47);
-
-    glBegin(GL_LINE_STRIP);
-    for(i=0; i<7; i++)
+  int ww = 600, wh = 500;
+  float fillCol[3] = {0.4,0.0,0.0};
+  float borderCol[3] = {0.0,0.0,0.0};
+  void setPixel(int pointx, int pointy, float f[3])
+  {
+       glBegin(GL_POINTS);
+            glColor3fv(f);
+            glVertex2i(pointx,pointy);
+       glEnd();
+       glFlush();
+  }
+void getPixel(int x, int y, float pixels[3])
+  {
+       glReadPixels(x,y,1.0,1.0,GL_RGB,GL_FLOAT,pixels);
+ }
+void drawPolygon(int x1, int y1, int x2, int y2)
+  {
+       glColor3f(0.0,0.0,0.0);
+       glBegin(GL_LINES);
+            glVertex2i(x1, y1);
+            glVertex2i(x1, y2);
+       glEnd();
+       glBegin(GL_LINES);
+            glVertex2i(x2, y1);
+            glVertex2i(x2, y2);
+       glEnd();
+       glBegin(GL_LINES);
+            glVertex2i(x1, y1);
+            glVertex2i(x2, y1);
+       glEnd();
+       glBegin(GL_LINES);
+            glVertex2i(x1, y2);
+            glVertex2i(x2, y2);
+       glEnd();
+       glFlush();
+  }
+void display()
+  {
+       glClearColor(0.5,0.0,0.1, 1.0);
+       glClear(GL_COLOR_BUFFER_BIT);
+       drawPolygon(150,250,200,300);
+       glFlush();
+  }
+void boundaryFill4(int x,int y,float fillColor[3],float borderColor[3])
+  {
+       float interiorColor[3];
+       getPixel(x,y,interiorColor);
+       if((interiorColor[0]!=borderColor[0] && (interiorColor[1])!=borderColor[1] && (interiorColor[2])!=borderColor[2]) && (interiorColor[0]!=fillColor[0] && (interiorColor[1])!=fillColor[1] && (interiorColor[2])!=fillColor[2]))
        {
-        glVertex2f(50.0+((GLfloat) i * 50.0), 75.0);
-    glEnd();
+            setPixel(x,y,fillColor);
+            boundaryFill4(x+1,y,fillColor,borderColor);
+            boundaryFill4(x-1,y,fillColor,borderColor);
+            boundaryFill4(x,y+1,fillColor,borderColor);
+            boundaryFill4(x,y-1,fillColor,borderColor);
        }
-    for(i=0; i<6;i++)
-    {
-        drawOneLine(50.0+((GLfloat) i * 50.0),50.0,50.0 + ((GLfloat) (i+1) * 50.0), 50.0);
-    }
-    glLineStipple(5, 0x1C47);
-    drawOneLine(50.0,25.0,350.0,25.0);
-
-    glDisable(GL_LINE_STIPPLE);
-    glFlush();
-}
-
-void reshape(int w, int h)
-{
-    glViewport(0,0,(GLsizei) w, (GLsizei) h);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0.0, (GLdouble) w, 0.0,(GLdouble) h);
-}
-
+  }
+  void mouse(int btn, int state, int x, int y)
+  {
+       if(btn==GLUT_RIGHT_BUTTON && state == GLUT_DOWN)
+       {
+            int xi = x;
+            int yi = (wh-y);
+            boundaryFill4(xi,yi,fillCol,borderCol);
+       }
+  }
+void myinit()
+  {
+       glViewport(0,0,ww,wh);
+       glMatrixMode(GL_PROJECTION);
+       glLoadIdentity();
+       gluOrtho2D(0.0,(GLdouble)ww,0.0,(GLdouble)wh);
+       glMatrixMode(GL_MODELVIEW);
+  }
 int main(int argc, char** argv)
-{
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
-    glutInitWindowSize(400, 150);
-    glutInitWindowPosition(100,100);
-    glutCreateWindow(argv[0]);
-    init();
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutMainLoop();
-    return 0;
-}
+  {
+          glutInit(&argc,argv);
+          glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB);
+          glutInitWindowSize(ww,wh);
+          glutCreateWindow("Bountry-Fill-Recursive");
+          glutDisplayFunc(display);
+
+          glutMouseFunc(mouse);
+          myinit();
+          glutMainLoop();
+       return 0;
+  }
